@@ -1,0 +1,6 @@
+# Eklima data downloaded by eklima.py
+#
+# Download time: 2018-06-20T16:00
+#
+# Station data:
+# no	                            name	lat	lon	elev	since	until

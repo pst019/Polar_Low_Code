@@ -1,0 +1,12 @@
+
+STARS_get_import_list - creates the list of year month day for mars requests
+
+STARS_field - first skript to plot the ERA5 fields
+main_STARS - plot different ERA5 fields
+
+
+STARS_list - first script to analyse the STARS -list
+STARS_map - track map of the systems
+
+STARS_match_ERA5 - gets ERA5 data for STARS PLs and writes it in a list, which is read by STARS_list_system
+STARS_list_system_? - makes histograms of the systems - including ERA5 data

@@ -1,0 +1,120 @@
+#!/usr/bin/env python3
+# -*- coding: utf-8 -*-
+"""
+Created on Fri Mar  3 13:25:51 2017
+
+@author: pst019
+"""
+
+import os
+user = os.getcwd().split('/')[2]
+
+
+import pickle
+import sys
+sys.path.insert(0, '/home/'+user+'/code/Functions/')
+from f_imp_ERA2 import *
+from f_imp_ASR import *
+
+from f_impLists import *
+from f_mapplot import * #make basemap plots
+from f_plot_fields import * #plot fields (onto basemap or cross section)
+
+
+Mediadir= '/media/'+user+'/1692A00D929FEF8B/'
+
+
+#model='ERA'
+model='ASR'
+
+fignr= 1
+
+
+year, month= 2000, 12
+
+day, hour=  31, 0
+t= ((day-1)*24+hour)//6 #hours since beginning of month
+#t= 52
+tcomb= t*2
+
+print(year, month, (t//4)+1,  t%4*6)
+  
+Sdurationlim= 2 #6 #in hours
+   
+"""import data"""
+T=TRACK_list_month2(year, month, duration_limit= 1, timestep='threehours', model=model)#, approved= False)
+ 
+if model== 'ERA':
+    d= data(['Vort', 'MSLP'], year, month, tstart=t, tend=t+1)
+elif model== 'ASR':
+    d= dataASR(year, month, sday= day, sh3=tcomb%8, eh3=tcomb%8)
+    d.impvar('SLP', level='surf')
+    d.impvar('vort', level= 850)
+
+
+if model == 'ERA':
+    
+    """unfiltered vorticity"""
+    plt.figure(fignr)
+    fignr+=1
+    plt.clf()
+    ##plt.subplot(2, 3, 1)    
+    #map= Lat_Lon_map(lllon= minlon, lllat= minlat, urlon= maxlon, urlat= maxlat)
+    map= Polar_map(latsouth= d.lat[-1])
+    grid= np.meshgrid(d.lon, d.lat) #pcolormesh needs corner points for projection
+    Lon, Lat= map(grid[0], grid[1])
+    
+    PlotVort(Lon, Lat, d.vort[0], map, maxlevel= 10, boxnr= 20)
+    plt.title('unfiltered vorticity')
+    
+    
+    """TRACK cyclones"""
+    """the position now"""
+    Txpt, Typt= map(T.PLlist[2][T.PLlist[1]== tcomb], T.PLlist[3][T.PLlist[1]== tcomb])
+    map.plot(Txpt,Typt,'bo')
+    for n in range(len(Txpt)):
+        plt.text(Txpt[n],Typt[n], str(int(T.PLlist[0][T.PLlist[1]== tcomb][n])), fontsize=10, ha='center',va='top',color='black')
+
+
+"""truncated data"""
+plt.figure(fignr)
+fignr += 1
+plt.clf()
+
+#map= Polar_map(latsouth= d.lat[-1])
+map= ASR_map(res='c')
+
+if model== 'ERA':
+    grid= np.meshgrid(d.lon, d.lat) #pcolormesh needs corner points for projection
+    Lon, Lat= map(grid[0], grid[1])
+
+elif model == 'ASR': 
+    Lon, Lat= map(d.lon, d.lat)
+   
+if model == 'ERA':
+    ntrunc, ntrunc2 = 100, 40
+    vorttrunc_dir=Mediadir+'ERA/pickle/Vort_trunc/Vort_trunc'
+    vortfilter_comb= pickle.load(open(vorttrunc_dir+str(year)+'_'+str(month).zfill(2)+'_T'+str(ntrunc)+'-'+str(ntrunc2), 'rb'), encoding='latin1').astype('float')
+    
+    PlotVort(Lon, Lat, vortfilter_comb[tcomb], map)
+    PlotContours(Lon, Lat, d.MSLP[0], map, leveldist= 4)
+    plt.title('truncated vorticity '+str(year)+' '+str(month)+' '+str(day)+' '+str(hour))
+
+
+elif model == 'ASR':
+#    PlotVort(Lon, Lat, d.vort[0]*1E5, map)
+    PlotColorMap(Lon, Lat, d.vort[0]*1E5, map)#, label='vorticity', symetric=True)
+    PlotContours(Lon, Lat, d.SLP[0], map, leveldist= 5)
+    plt.title('sea level pressure '+str(year)+' '+str(month)+' '+str(day)+' '+str(hour))
+
+
+
+
+#
+"""TRACK cyclones"""
+"""the position now"""
+Txpt, Typt= map(T.PLlist[2][T.PLlist[1]== tcomb], T.PLlist[3][T.PLlist[1]== tcomb])
+map.plot(Txpt,Typt,'bo')
+for n in range(len(Txpt)):
+    plt.text(Txpt[n],Typt[n], str(int(T.PLlist[0][T.PLlist[1]== tcomb][n])), fontsize=10, ha='center',va='top',color='black')
+

@@ -1,0 +1,68 @@
+
+f_STARS - useful function for import and standard operations
+
+STARS_get_import_list - creates the list of year month day for mars requests
+
+STARS_field - first skript to plot the ERA5 fields
+main_STARS - plot different ERA5 fields for a STARS PL
+main_STARS_2 - also include Stoll list and develops the local environment around the PL
+main_STARS_3 - local environment is rectangular
+
+STARS_list - first script to analyse the STARS -list
+STARS_map - track map of the systems
+
+STARS_match_ERA5 - gets ERA5 data for STARS PLs and writes it in a list, which is read by STARS_list_system
+STARS_list_system_? - makes histograms of the systems - including ERA5 data
+
+
+
+
+STARS_get_import_list_priorday -> get the list of all PL days
+-> STARS_daylist.txt -> STARS times
+-> STARS_daylist_priorday.txt -STARS times plus the day before
+-> STARS_daylist_append.txt - extended start and end dates to the priorday (used together with *_priorday.txt)
+-> track_list_PMC.txt - the list of the different time intervals for the PMC tracking
+-> track_list_PMC_appent.txt  - with extended start and end date (used)
+-> with this:
+run_PMC - run the PMC 
+
+Compare_TRACKS_Denis - compares Denis matches to the STARS tracks and my PMC tracks
+
+Compare_PMC_STARS_2 - compares the my PMC tracks to STARS cases
+
+Match_PMC_STARS - match the PMC for each STARS PL and writes the Stoll-list
+... _test - attempt to add the Stoll Obs to the list. Does not work for some multiple merges at simultaneous time, e.g. plot_tracktime_id= 102 -> this is now done afterwards
+-> now stoll Obs are added with the function: Stoll_Obs_nr(Stoll)
+
+some Stoll PLs exist twice at a time, this is checked in find_double_occurances_of_Stoll
+then the double occurences are excluded and saved in the list:
+version_4_dist_150_handfix.csv -> this should be used
+
+
+Compare_new_STARS - compares the Stoll-list to the Rojo/Stars tracks
+- prepares for some post processing
+
+
+STARS_list_system_5 - from STARS_list_system_4 -> analyse the Stoll matches of the Rojo STARS
+
+STARS_system_env - the PL-centred environment of the STARS PLs of different cloud types
+- made for Stoll systems
+
+
+postprocessing:
+STARS_env_EOF - calculates the environment EOF for different variables for a given timestep of the PL
+
+STARS_local_EOF - calculate the local EOF on the PL centred field ...
+STARS_local_EOF - rectangular local environment
+
+STARS_env_SOM - an attempt to implement SOM to python - not working
+-> go to r instead: 
+(r-env) pst019@ubuntu1:~$ rstudio
+
+STARS_local_SOM, precondition: create nc-file with PL-centred field from STARS_local_python
+- go to r: SOMs_PLcentred.R -> create nc-file with the SOMs
+- plot with this function
+- version 1: PLCG_type== 'track_smth'
+- version 2: PLCG_type== 'track_smth'
+
+STARS-correlation_matrix_2 - displays the correlation between different variable of the list

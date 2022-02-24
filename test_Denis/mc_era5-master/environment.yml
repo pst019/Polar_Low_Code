@@ -1,0 +1,31 @@
+name: clim
+channels:
+- conda-forge
+- dennissergeev/label/nightly
+dependencies:
+- python=3.7
+- cartopy
+- cython
+- ipykernel
+- ipywidgets
+- iris
+- matplotlib=3
+- metpy
+- numpy
+- octant
+- pandas
+- pyarrow
+- pytables
+- pytest
+- rasterio
+- scipy
+- scikit-learn
+- xarray
+- xesmf
+- pip:
+  - cdsapi
+  - fastprogress
+  - loguru
+  - cached_property
+  - pre-commit 
+  - git+https://github.com/dennissergeev/arke.git

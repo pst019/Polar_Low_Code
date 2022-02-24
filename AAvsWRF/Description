@@ -1,0 +1,8 @@
+main_ASR - plot different fields of ASR
+main_ASR_2 - is more updated and uses xarray - quite nice :)
+main_ERA - plot different fields of ERA
+
+main_ASR-ERA - old - was split up into main_ASR and main_ERA
+ASR-ERA_Invest - a bit old - to look at different time steps
+
+Main_ASR-ERA-AA-WRF - combines different main_classes - a bit old

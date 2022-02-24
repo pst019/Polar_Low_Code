@@ -1,0 +1,24 @@
+Use python 2.7 for the shperical harmonic transform module shtns
+(https://users.isterre.fr/nschaeff/SHTns/)
+
+https://conda.io/docs/user-guide/tasks/manage-environments.html#activate-env
+
+
+for this:
+conda create -n py27 python=2.7 anaconda
+
+source activate py27   (now we are in a different environment with python 2.7)
+
+
+conda install -c flomertens shtns
+conda install netCDF4
+conda install basemap
+
+
+
+
+
+Sph-filter_polar-map.py - plots different spherical harmonic transforms on a polar map
+
+
+Spherical_harmonics_filter.py in mother folder can be utilized in python 3.6

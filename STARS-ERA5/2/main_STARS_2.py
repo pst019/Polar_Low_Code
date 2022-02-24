@@ -1,0 +1,610 @@
+#!/usr/bin/env python3
+# -*- coding: utf-8 -*-
+"""
+Created on Thu Aug 15 10:01:45 2019
+
+@author: pst019
+"""
+
+
+import time
+start = time.time()
+
+
+import os
+user = os.getcwd().split('/')[2]
+
+if user=='pst019':
+    homedir= '/home/'+user+'/home/'
+    Mediadir= '/media/'+user+'/1692A00D929FEF8B/'
+
+else:
+    Mediadir= '/run/media/pst019/1692A00D929FEF8B/'
+'/home/'+user+'/home/'
+
+import sys  #to import the functions from a different directory
+sys.path.insert(0, homedir+ 'Polar_Low/polar_low_code/Functions')
+
+import pandas as pd 
+import matplotlib.pyplot as plt
+import numpy as np
+import xarray as xr
+
+from f_useful import *
+from f_STARS import *
+from f_carto import *
+import cartopy.crs as ccrs
+from f_meteo import *
+import scipy.ndimage.filters as filters
+
+#save= True
+save= False
+
+fignr= 12
+
+
+#track_type='Rojo'
+track_type='Stoll'
+
+imp_lists= True
+#imp_lists= False
+
+ID= '204_1' #'95' #'12'  #95
+Obs= 30
+
+
+radius= 500 #radius of the green circle
+
+
+if imp_lists:
+    if track_type=='Rojo':
+        S = import_STARS(Mediadir, "PL/STARS/Rojo-etal_2019.csv")
+        S_ind= STARS_individual_systems(S)
+    
+    elif track_type== 'Stoll':
+        test= 'version4'
+        dist= 150
+        
+        Stoll_STARS_file="ERA5_STARS/STARS-PMC-merge/"+test+"_dist_"+str(dist)+"_handfix.csv"
+        Stoll = pd.read_csv(Mediadir+ Stoll_STARS_file)
+        Stoll['time']= pd.DatetimeIndex(Stoll.time)
+        
+        Stoll= Stoll_excl(Stoll)
+        Stoll= Stoll_Obs_nr(Stoll) #get the Obs nr
+    
+        Stoll= Stoll.rename(columns={"Stoll nr": "ID"})
+        
+        
+        """Stoll_individual_systems"""
+        Stoll_ind= Stoll_individual_systems(Stoll, ID_name= 'ID')    
+    
+        S= Stoll
+        S_ind= Stoll_ind
+
+
+
+fig = plt.figure(fignr, figsize= (8,6) )
+fignr+=1
+plt.clf()
+
+
+ax= Plot_Polar_Stereo(fig, central_longitude= 30, extent= [-10, 50, 60, 80], subplot= (1,1,1))
+#ax= Plot_PlateCarree(fig, central_longitude= 0, extent= [-15, 55, 50, 80], subplot= (1,1,1))
+
+scale_bar(ax, 500, location= (0.06, 0.04))
+
+
+
+
+"""get the ERA-5 data"""
+
+plevel=None
+vmin,vmax=None,None
+setup= None #'geo'
+#filter_fields= False
+
+"""specify field"""
+#filetype='surface'
+#var= '2t'
+#var= '10u'
+#var= '10v'
+#var= 'U'
+#var= 'skt'
+
+
+filetype='tracking'
+plevel= 850
+#var='U'
+#var= 'u'
+#var='Vort'
+#var='t'
+var='grad_t'
+#vmin,vmax= 0, 10
+
+#var='dU/dL'
+#var= 'barotrop_efolding'
+#var='barotrop_efolding_filter'
+#vmin,vmax= 0, 30
+
+#var='skt-t'
+#var='sst-t'
+#vmin,vmax= 35, 52
+#
+#
+#filetype='vorticity'
+#plevel= 850
+#var='vo'
+
+
+#filetype='boundary'
+#var= 'cape'
+#var= 'blh'
+#var= 'tcc'
+#var= 'hcc'
+
+#filetype='forecast'
+##var='sshf'
+##var='slhf'
+#var= 'tp'
+##var= 'sf'
+##var= 'lsp'
+##var= 'cp'
+##var= 'lsp'
+#var='sf'
+#var= 'ttr' #toa_outgoing_longwave_flux
+
+
+#filetype='plevels'
+#plevel= [925, 700]
+##var='dU/dH'
+##var='baroclinic'
+##var='baroclinic_efolding'
+#var='baroclinic_efolding_filter'
+#vmin,vmax= 0, 30
+
+"""setup"""
+#filetype= 'plevels'
+##setup, plevel, var, cont_var= 'geo', 850, 'U', 'z'
+#setup, plevel, var, cont_var= 'shear', [925, 700], 'thickness', 'z'
+
+
+"""the contour variable"""
+if plevel== None: cont_var= 'msl'
+cont_var='z'
+#cont_var='t'
+
+
+#sym= False
+#cmap='jet'
+#cmap= 'viridis'
+#cmap= 'Greys'
+#cmap= 'Greys_r'
+#cmap= 'Blues'
+#cmap= 'Reds'
+#cmap= 'Reds_r'
+
+sym= True
+cmap= 'RdBu_r'
+
+
+
+
+
+
+"""specify time"""
+##year, month, day= 2019, 5, 3 
+##year, month, day= 2000, 3, 9
+##year, month, day= 1999, 12, 20
+#year, month, day= 2002, 1, 26
+#
+#hour= 4
+#
+#filetime= str(year)+'_'+str(month).zfill(2)+'_'+str(day).zfill(2)
+#
+#datetime_now= np.datetime64(str(year)+'-'+str(month).zfill(2)+'-'+str(day).zfill(2)+'T'+str(hour).zfill(2) )
+#tdelta= np.abs((S['datetime'] - datetime_now) / np.timedelta64(1, 'h'))
+#S_now= S[tdelta== tdelta.min()]
+
+
+
+
+"""specify system ID, Obsnr"""
+S_now= S[np.logical_and(S['ID'] == ID, S['Obs'] == Obs ) ]
+
+datetime_now= S_now.time.dt.round("H")
+
+#S_now['dt_round']= [dt.replace(hour= 0, minute= 0) for dt in S_now['datetime']]
+
+filetime= str(datetime_now.dt.year.values[0])+'_'+str(datetime_now.dt.month.values[0]).zfill(2)+'_'+str(datetime_now.dt.day.values[0]).zfill(2)
+hour= datetime_now.dt.hour.values[0]
+
+print(datetime_now)
+print('Morphology now:', S_now['Morphology'].values[0])
+
+"""general"""
+
+#else:
+#    d0= xr.open_dataset(Mediadir + "ERA5_STARS/data/tracking_era5_"+ filetime + '.nc')
+#    d0= d0.isel(time= hour)
+
+ds= xr.open_dataset(Mediadir + "ERA5_STARS/data/"+filetype+ "_era5_"+ filetime + '.nc')
+ds= ds.isel(time= hour)
+
+if plevel==None:
+    d0= xr.open_dataset(Mediadir + "ERA5_STARS/data/surface_era5_"+ filetime + '.nc')
+    d0= d0.isel(time= hour)
+
+    ds= xr.merge([d0, ds])
+
+if filetype in ['plevels', 'tracking']:
+    ds['plev']/= 100
+    dsorg= ds
+    ds= ds.sel(plev= plevel)
+
+
+
+#if filter_fields:
+#    gausfilter= 10
+#    ds['u'] = (('lat', 'lon'), filters.gaussian_filter(ds.u, sigma= gausfilter, mode='nearest', truncate= 1.) )
+#    ds['v'] = (('lat', 'lon'), filters.gaussian_filter(ds.v, sigma= gausfilter, mode='nearest', truncate= 1.) )
+
+
+"""--------------create/prepare the plotted variable-------------------"""
+if var== 'U':
+    if filetype=='surface':
+        ds['U']= np.sqrt(ds['10u']**2 + ds['10v']**2)
+        ds[var].attrs['units']= 'm/s'
+    else:
+        ds['U']= np.sqrt(ds['u']**2 + ds['v']**2)
+        ds[var].attrs['units']= 'm/s'
+
+if var=='vo':
+    ds[var]*= 1E5
+    ds[var].attrs['units']= '10$^{-5}$ 1/s'    
+
+if var== 'Vort': 
+    vort= grad_x(ds.v, ds.lat, ds.lon) - grad_y(ds.u, ds.lat, ds.lon)
+    vort *= 1E5
+
+    ds[var]= (('lat', 'lon'), vort)
+    ds[var].attrs['units']= '10**-5 s**-1' 
+
+if var=='skt-t':
+    d0= xr.open_dataset(Mediadir + "ERA5_STARS/data/surface_era5_"+ filetime + '.nc')
+    d0= d0.isel(time= hour)
+
+    ds= xr.merge([d0, ds])    
+    
+    ds[var]= ds['skt']- ds['t']
+    ds[var].attrs['units']= 'K'   
+
+if var=='sst-t':
+    d0= xr.open_dataset(Mediadir + "ERA5_STARS/data/boundary_era5_"+ filetime + '.nc')
+    d0= d0.isel(time= hour)
+
+    ds= xr.merge([d0, ds])    
+    
+    ds[var]= ds['sst']- ds['t']
+    ds[var].attrs['units']= 'K' 
+
+
+if var== 'grad_t':
+    variable= np.sqrt(grad_x(ds.t, ds.lat, ds.lon)**2 + grad_y(ds.t, ds.lat, ds.lon)**2) *1E5
+    ds[var]= (('lat', 'lon'),  variable)
+
+    ds[var].attrs['units']= 'K/100 km'
+
+if var=='thickness':   
+    z_diff= (ds['z'].sel(plev=700) - ds['z'].sel(plev=925) )
+    ds[var]= (('lat', 'lon'),  z_diff/9.81)
+    ds[var].attrs['units']= 'm'
+
+if var== 'dU/dL':
+    variable= np.sqrt(grad_y(ds.u, ds.lat, ds.lon)**2 + grad_x(ds.v, ds.lat, ds.lon)**2)
+#    variable= np.sqrt(grad_x(ds.v, ds.lat, ds.lon)**2)
+#    variable= np.sqrt(grad_y(ds.u, ds.lat, ds.lon)**2)
+    ds[var]= (('lat', 'lon'),  variable)
+    ds[var].attrs['units']= '1/s'
+
+if var=='barotrop_efolding':
+    variable= 0.2* np.sqrt(grad_y(ds.u, ds.lat, ds.lon)**2 + grad_x(ds.v, ds.lat, ds.lon)**2)
+    variable= 1/variable* 1/(60**2)   
+    ds[var]= (('lat', 'lon'),  variable)
+    ds[var].attrs['units']= 'h'
+
+
+if var=='barotrop_efolding_filter':
+    gausfilter= 4
+    ds['u'] = (('lat', 'lon'), filters.gaussian_filter(ds.u, sigma= gausfilter, mode='nearest', truncate= 1.) )
+    ds['v'] = (('lat', 'lon'), filters.gaussian_filter(ds.v, sigma= gausfilter, mode='nearest', truncate= 1.) )
+
+    variable= 0.2* np.sqrt(grad_y(ds.u, ds.lat, ds.lon)**2 + grad_x(ds.v, ds.lat, ds.lon)**2)
+    variable= 1/variable* 1/(60**2)   
+    ds[var]= (('lat', 'lon'),  variable)
+    ds[var].attrs['units']= 'h'
+
+    
+
+if var in ['dU/dH', 'baroclinic', 'baroclinic_efolding']:
+    U_diff= np.sqrt(ds.u.isel(plev=1)**2 + ds.v.isel(plev=1)**2) - np.sqrt(ds.u.isel(plev=0)**2 + ds.v.isel(plev=0)**2)
+    h_diff= (ds['z'].isel(plev=1) - ds['z'].isel(plev=0) )/9.81
+    dUdH= np.abs(U_diff /h_diff)
+
+    ds[var]= (('lat', 'lon'),  dUdH)
+    ds[var].attrs['units']= '1/s'    
+
+
+if var in ['baroclinic', 'baroclinic_efolding']:
+    f= np.sin(np.deg2rad(ds.lat)) * 2*2*np.pi/(24*60**2)
+    f= np.tile(f, (len(ds.lon), 1)).T
+    
+    theta_1, theta_0= PotTemp(ds.t.isel(plev=1), plevel[1]), PotTemp(ds.t.isel(plev=0), plevel[0])
+    N= np.sqrt(9.81/(theta_1+theta_0)/2 *  (theta_1- theta_0)/h_diff)
+
+    variable= 0.31*f/N* dUdH
+    ds[var]= (('lat', 'lon'),  variable)
+    ds[var].attrs['units']= '1/s'    
+
+if var=='baroclinic_efolding':
+    variable= 1/variable* 1/(60**2)   
+    ds[var]= (('lat', 'lon'),  variable)
+    ds[var].attrs['units']= 'h'
+
+
+if var=='baroclinic_efolding_filter':
+    gausfilter= 4
+    ds['u'] = (('plev', 'lat', 'lon'), filters.gaussian_filter(ds.u, sigma= (0, gausfilter, gausfilter) , mode='nearest', truncate= 1.) )
+    ds['v'] = (('plev', 'lat', 'lon'), filters.gaussian_filter(ds.v, sigma= (0, gausfilter, gausfilter) , mode='nearest', truncate= 1.) )
+    ds['z'] = (('plev', 'lat', 'lon'), filters.gaussian_filter(ds.z, sigma= (0, gausfilter, gausfilter) , mode='nearest', truncate= 1.) )
+    ds['t'] = (('plev', 'lat', 'lon'), filters.gaussian_filter(ds.t, sigma= (0, gausfilter, gausfilter) , mode='nearest', truncate= 1.) )
+
+    U_diff= np.sqrt(ds.u.isel(plev=1)**2 + ds.v.isel(plev=1)**2) - np.sqrt(ds.u.isel(plev=0)**2 + ds.v.isel(plev=0)**2)
+    h_diff= (ds['z'].isel(plev=1) - ds['z'].isel(plev=0) )/9.81
+    dUdH= np.abs(U_diff /h_diff)
+    
+    f= np.sin(np.deg2rad(ds.lat)) * 2*2*np.pi/(24*60**2)
+    f= np.tile(f, (len(ds.lon), 1)).T 
+    
+    theta_1, theta_0= PotTemp(ds.t.isel(plev=1), plevel[1]), PotTemp(ds.t.isel(plev=0), plevel[0])
+    N= np.sqrt(9.81/(theta_1+theta_0)/2 *  (theta_1- theta_0)/h_diff)
+
+    variable= 0.31*f/N* dUdH    
+    variable= 1/variable* 1/(60**2)   
+    ds[var]= (('lat', 'lon'),  variable)
+    ds[var].attrs['units']= 'h'    
+    
+    
+    
+if 'msl' in list(ds.keys()):
+    ds['msl']/= 100
+    ds['msl'].attrs['units']= 'hPa'
+
+if var in ['ttr', 'sshf', 'slhf']:
+    ds[var]/= -3600
+    ds[var].attrs['units']= 'W m**-2'
+if var in ['sf', 'lsp', 'cp', 'tp']:
+    ds[var] *= 1000
+    ds[var].attrs['units']= 'mm/h' 
+
+
+
+
+"""make the shading plot"""
+if setup != 'shear':
+    if vmax != None:
+        cf= ax.pcolormesh(ds.lon, ds.lat, ds[var], transform= ccrs.PlateCarree(), cmap= cmap, vmin= vmin, vmax=vmax)
+        
+    elif sym== False: cf= ax.pcolormesh(ds.lon, ds.lat, ds[var], transform= ccrs.PlateCarree(), cmap= cmap)
+    elif sym== True:
+        vextr= np.max([np.max(ds[var]), -np.min(ds[var])])
+        cf= ax.pcolormesh(ds.lon, ds.lat, ds[var], transform= ccrs.PlateCarree(), cmap= cmap, vmin= -vextr, vmax= vextr)
+    
+    
+    cb= fig.colorbar(cf, ax= ax, shrink=0.8)
+    varlabel= var
+    if plevel != None: varlabel = var+'_'+str(plevel)
+    cb.set_label(varlabel + ' ['+ ds[var].units + ']', size=14)    
+
+
+
+
+"""make the contour plot"""
+if cont_var== 'msl' :
+    cs= ax.contour(ds.lon, ds.lat, ds['msl'], np.arange(950, 1030, 2), transform= ccrs.PlateCarree(), colors='k', linewidths= 1)
+    plt.clabel(cs, fontsize=10, inline=1, fmt='%1.0f')
+
+elif cont_var== 'z':
+    if len(ds['z'].shape)== 3: plotz= ds['z'].mean(dim='plev') #if there are several pressure levels, the mean is taken
+    else: plotz= ds['z']
+    
+    cs= ax.contour(ds.lon, ds.lat, plotz/9.81, np.arange(0, 10000, 10), transform= ccrs.PlateCarree(), colors='k', linewidths= 1)
+    plt.clabel(cs, fontsize=10, inline=1, fmt='%1.0f')
+
+elif cont_var=='t':
+    cs= ax.contour(ds.lon, ds.lat, ds['t'], np.arange(200, 400, 1), transform= ccrs.PlateCarree(), colors='k', linewidths= 1)
+    plt.clabel(cs, fontsize=10, inline=1, fmt='%1.0f')
+
+
+
+if var in ['U', 'dU/dL']: #plot the wind vector
+    nx= 10
+#    ax.quiver(ds.lon[::nx], ds.lat[::nx], ds['u'].values[::nx, ::nx], ds['v'].values[::nx, ::nx], pivot='middle', scale= 700, transform= ccrs.PlateCarree())
+    PlotWind(ds.lon, ds.lat, ds['u'].values, ds['v'].values, ax, nx= 15, ny=30, arrowtype= 'quiver', alen=15, scale=False)
+
+
+
+
+
+
+if setup=='geo': #geostrophic wind
+
+    f= np.sin(np.deg2rad(ds.lat)) * 2*2*np.pi/(24*60**2)
+    f= np.tile(f, (len(ds.lon), 1)).T
+    
+   
+    u_g= -1/f* grad_y(ds.z, ds.lat, ds.lon)
+    v_g= 1/f* grad_x(ds.z, ds.lat, ds.lon)
+    
+#    ax.quiver(ds.lon[::nx]+0.3, ds.lat[::nx]+.3, u_g[::nx, ::nx], v_g[::nx, ::nx], pivot='middle', color= 'r', scale= 700, transform= ccrs.PlateCarree())
+    PlotWind(ds.lon+0.3, ds.lat+.3, u_g, v_g, ax, nx= 15, ny=30, arrowtype= 'quiver', alen=15, scale=False, color= 'r')
+
+
+
+"""get the shear"""
+if setup== 'shear':
+    PlotWind(ds.lon, ds.lat, ds['u'].mean(dim='plev').values, ds['v'].mean(dim='plev').values, ax, nx= 15, ny=30, arrowtype= 'quiver', alen=15, scale=False)
+    
+    #calculate and plot the thermal wind
+    f= np.sin(np.deg2rad(ds.lat)) * 2*2*np.pi/(24*60**2)
+    f= np.tile(f, (len(ds.lon), 1)).T
+    
+    u_therm, v_therm= -1/f* grad_y(z_diff, ds.lat, ds.lon), 1/f*grad_x(z_diff, ds.lat, ds.lon)
+
+    cs= ax.contour(ds.lon, ds.lat, z_diff/9.81, np.arange(0, 5000, 10), transform= ccrs.PlateCarree(), colors='r', linewidths= 1)
+    plt.clabel(cs, fontsize=10, inline=1, fmt='%1.0f')
+    
+    PlotWind(ds.lon[10:], ds.lat[10:], u_therm[10:, 10:], v_therm[10:, 10:], ax, nx= 15, ny=30, arrowtype= 'quiver', alen=15, scale=False, color= 'r')
+    
+    
+    #calculate the shear        
+    u_mean= value_in_rad(ds['u'].mean(dim='plev'), ds.lat, ds.lon, S_now.lat.values[0], S_now.lon.values[0], distance= radius)
+    v_mean= value_in_rad(ds['v'].mean(dim='plev'), ds.lat, ds.lon, S_now.lat.values[0], S_now.lon.values[0], distance= radius)
+    print('mean wind:', u_mean, v_mean)
+          
+    u_therm_m= value_in_rad(u_therm, ds.lat, ds.lon, S_now.lat.values[0], S_now.lon.values[0], distance= radius, intype='np')
+    v_therm_m= value_in_rad(v_therm, ds.lat, ds.lon, S_now.lat.values[0], S_now.lon.values[0], distance= radius, intype='np')    
+    print('thermal wind:', u_therm_m, v_therm_m)
+        
+    alpha= angle_between((u_therm_m, v_therm_m), (u_mean, v_mean))    
+    print('alpha:', alpha)
+
+
+
+        
+    
+
+
+
+
+"""plot radius, sheering wind"""
+ax.scatter(S_now.lon, S_now.lat, transform=ccrs.PlateCarree(), s= 10, color= 'g')
+
+center_lon, center_lat= S_now.lon.values[0], S_now.lat.values[0]
+
+#radius= S_now.Diameter.values[0]/2
+#plot_circle(ax, lon, lat, radius, edgecolor= 'r')
+
+plot_circle(ax, center_lon, center_lat, radius, edgecolor= 'green')
+
+
+
+S_now_whole= S.loc[S['ID'] == ID]
+S_now_track= prepare_tracks(S_now_whole, system_id_label="ID")[0]
+S_now_track.plot_track(ax= ax, color='g')
+
+
+steering_time= 6
+steering_rad= 200
+
+u_mean= value_in_rad(dsorg['u'].sel(plev= [1000, 700]).mean(axis= 0), ds.lat, ds.lon, center_lat, center_lon, steering_rad)
+v_mean= value_in_rad(dsorg['v'].sel(plev= [1000, 700]).mean(axis= 0), ds.lat, ds.lon, center_lat, center_lon, steering_rad)
+
+#            if ilegend== 1: ax.scatter(tracklon+ (u_mean* 3.6*steering_time)/(110* np.cos(np.deg2rad(tracklat))), tracklat+ (v_mean* 3.6*3)/110, transform=ccrs.PlateCarree(), s= 50, marker="v", color= 'b', zorder= 2, label= 'Loc 3h steer r='+str(radius))
+steer_lon= center_lon+ (u_mean * 3.6 * steering_time)/(110* np.cos(np.deg2rad(center_lat))) #estimated longitude with steering
+steer_lat=  center_lat+ (v_mean * 3.6 * steering_time)/110
+ax.scatter(steer_lon, steer_lat, transform=ccrs.PlateCarree(), s= 50, marker="^", color= 'b', zorder= 2)
+
+steer_perp_lon= center_lon+ (-v_mean* 3.6* steering_time)/(110* np.cos(np.deg2rad(center_lat))) #estimated longitude with steering
+steer_perp_lat=  center_lat+ (u_mean* 3.6* steering_time)/110
+ax.scatter(steer_perp_lon, steer_perp_lat, transform=ccrs.PlateCarree(), s= 50, marker="x", color= 'b', zorder= 2)
+
+steering_distance= distance( (center_lat, center_lon), (steer_lat, steer_lon))
+print('steering distance in {}h: {}km'.format(steering_time, round(steering_distance) ) )
+
+if steering_distance/steering_time < 10:
+    print('Should be considered if the rotation works with such a small steering wind')
+
+
+"""create local grid"""
+grid_dist= 50 #in km
+rot_vector= np.array([steer_lat - center_lat, steer_lon - center_lon])*grid_dist/steering_distance
+rot_perp_vector= np.array([steer_perp_lat - center_lat, steer_perp_lon - center_lon])*grid_dist/steering_distance
+
+ncells= radius//grid_dist
+
+center_grid_lat= np.array([[center_lat + n*rot_vector[0]+ m*rot_perp_vector[0] for n in np.arange(-ncells, ncells+1)] for m in np.arange(-ncells, ncells+1)])
+center_grid_lon= np.array([[center_lon + n*rot_vector[1]+ m*rot_perp_vector[1]  for n in np.arange(-ncells, ncells+1)] for m in np.arange(-ncells, ncells+1)])
+#the next is not better even though longitude is adapted, but the latitude should also..
+#center_grid_lon= np.array([[center_lon + np.cos(np.deg2rad(center_lat))/np.cos(np.deg2rad(center_grid_lat[mi,ni]))* ( n*rot_vector[1]+ m*rot_perp_vector[1] ) for ni,n in enumerate(np.arange(-ncells, ncells+1))] for mi,m in enumerate(np.arange(-ncells, ncells+1))])
+
+
+#plot the grid
+ax.scatter(center_grid_lon, center_grid_lat, transform=ccrs.PlateCarree(), s= 3, marker="x", color= 'r', zorder= 1)
+dist_grid_axis= np.arange(-ncells, ncells+1)*grid_dist
+
+print('corner point distance: ', np.round(np.array([
+distance((center_grid_lat[0,0], center_grid_lon[0,0]), (center_grid_lat[0,-1], center_grid_lon[0,-1])),
+distance((center_grid_lat[-1,-1], center_grid_lon[-1,-1]), (center_grid_lat[0,-1], center_grid_lon[0,-1])),
+distance((center_grid_lat[-1,0], center_grid_lon[-1,0]), (center_grid_lat[-1,-1], center_grid_lon[-1,-1])),
+distance((center_grid_lat[0,0], center_grid_lon[0,0]), (center_grid_lat[-1,0], center_grid_lon[-1,0])) ]) ) )
+
+
+plt.tight_layout()
+
+
+
+plt.figure(fignr)
+fignr+=1
+plt.clf()
+
+
+""" interpolate to local grid"""
+from scipy.interpolate import griddata
+
+longrid, latgrid= np.meshgrid(ds.lon, ds.lat)
+var_interp= griddata(tuple([np.ravel(longrid), np.ravel(latgrid)]) , np.ravel(ds[var]), (center_grid_lon, center_grid_lat), method='linear')
+cont_var_interp= griddata(tuple([np.ravel(longrid), np.ravel(latgrid)]) , np.ravel(ds[cont_var]), (center_grid_lon, center_grid_lat), method='linear')
+
+
+if vmax != None:
+    cf= plt.contourf(dist_grid_axis, dist_grid_axis, var_interp, cmap= cmap, vmin= vmin, vmax=vmax)        
+elif sym== False: cf= plt.contourf(dist_grid_axis, dist_grid_axis, var_interp, cmap= cmap)
+elif sym:
+    cf= plt.contourf(dist_grid_axis, dist_grid_axis, var_interp, cmap=cmap, vmin= -vextr, vmax= vextr)
+
+cb= plt.colorbar(cf)
+varlabel= var
+if plevel != None: varlabel = var+'_'+str(plevel)
+cb.set_label(varlabel + ' ['+ ds[var].units + ']', size=14)   
+    
+#plot the contour variable
+if cont_var== 'z': cont_var_interp/= 9.81
+contours= plt.contour(dist_grid_axis, dist_grid_axis, cont_var_interp, colors='k', linewidths= 1)
+plt.clabel(contours, inline=True, fontsize=8, fmt='%1.0f') 
+
+plt.xlabel('Distance in steering wind direction [km]')
+plt.ylabel('Distance orthogonal to steering wind direction [km]')
+
+plt.scatter(0,0, marker= 'o', color='g')
+
+
+
+
+"""print local max, min, mean"""
+localmax= value_in_rad(ds[var], ds.lat, ds.lon, S_now.lat.values[0], S_now.lon.values[0], distance= radius, type='max')
+localmin= value_in_rad(ds[var], ds.lat, ds.lon, S_now.lat.values[0], S_now.lon.values[0], distance= radius, type='min')
+localmean= value_in_rad(ds[var], ds.lat, ds.lon, S_now.lat.values[0], S_now.lon.values[0], distance= radius, type='mean')
+
+print('localmax, localmin, localmean: ', localmax, localmin, localmean)
+
+
+
+if var== 'dU/dL':
+    barotropic= 0.2* localmax
+    print('barotropic growth rate: ', np.round(barotropic, 6) )
+    print('e-folding time [h]: ', np.round(1/barotropic * 1/(60**2), 1) )
+
+
+if var== 'baroclinic':
+    print('baroclinic growth rate: ', np.round(barotropic, 6) )
+    print('e-folding time [h]: ', np.round(1/barotropic * 1/(60**2), 1) )

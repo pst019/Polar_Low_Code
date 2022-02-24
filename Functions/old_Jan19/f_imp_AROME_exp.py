@@ -1,0 +1,272 @@
+#!/usr/bin/env python3
+# -*- coding: utf-8 -*-
+"""
+Created on Fri Jan 13 15:07:08 2017
+
+@author: pst019
+
+This is from plot_comparison to import data
+"""
+
+from netCDF4 import Dataset, num2date
+import numpy as np
+import time
+
+
+class data:
+    def __init__(self, filename, res= 5):
+        """res - gives how much the resolution is decreased"""
+        self.filename= filename
+        
+        nc= Dataset(self.filename)
+#        print(nc.variables.keys())
+        #this one is even more interesting:
+#        print(nc.variables.values())
+        """should remove height above msl"""
+        
+        """reduce resolution"""
+        self.res = res
+        
+        self.tim = nc.variables['time'][:]
+        self.datetime = num2date(nc.variables['time'][:], nc.variables['time'].units)
+        self.lat = nc.variables['latitude'][:][::self.res, ::self.res]
+        self.lon = nc.variables['longitude'][:][::self.res, ::self.res]
+        self.press= nc.variables['pressure'][:][::-1]
+        
+        
+        print(' relhum has been changed to RH and Temp to T')
+        """be careful the first variable in lat and lon is the y- variable and the second x: lat = (y, x)"""
+        
+    def imp_standard(self):
+        """import all levels for the most important data"""
+        nc= Dataset(self.filename)
+
+        # Variables
+        self.T = nc.variables['air_temperature_pl'][:][:, ::-1, ::self.res, ::self.res]
+        self.mslp = nc.variables['air_pressure_at_sea_level'][:, 0][:, ::self.res, ::self.res]/100 #in hPa
+        self.u = nc.variables['x_wind_pl'][:][:, ::-1, ::self.res, ::self.res] #
+        self.v = nc.variables['y_wind_pl'][:][:, ::-1, ::self.res, ::self.res]
+    
+
+
+    def imp_surf(self, tn):
+        """import just the data of the surface for one point of time tn"""     
+#        print('presslevel: '+ str(self.press[pn])+ ', time: '+ str(time.localtime(self.tim[tn])[:4]))
+#        pn = len(self.press) - pn -1 #since I inversed the pressure
+        
+        nc= Dataset(self.filename)
+
+        # Variables
+        self.T0m = nc.variables['air_temperature_0m'][tn, 0][::self.res, ::self.res]
+        self.T2m = nc.variables['air_temperature_2m'][tn, 0][::self.res, ::self.res]        
+        self.mslp = nc.variables['air_pressure_at_sea_level'][tn, 0][::self.res, ::self.res]/100 #in hPa
+        self.u10m = nc.variables['x_wind_10m'][tn, 0][::self.res, ::self.res]
+        self.v10m = nc.variables['y_wind_10m'][tn, 0][::self.res, ::self.res]        
+
+    def imp_geop1000(self, tn):
+        self.geop1000 = nc.variables['geopotential_pl'][tn, 0][::self.res, ::self.res]/9.81
+     
+
+    def imp_atm(self, tn):
+        """import data that is only available for one level for the atmosphere"""
+        nc= Dataset(self.filename)
+
+        self.cloud_conv = nc.variables['convective_cloud_area_fraction'][tn, 0][::self.res, ::self.res]
+        self.cloud_high = nc.variables['high_type_cloud_area_fraction'][tn, 0][::self.res, ::self.res]
+        self.cloud_med = nc.variables['medium_type_cloud_area_fraction'][tn, 0][::self.res, ::self.res]
+        self.cloud_low = nc.variables['low_type_cloud_area_fraction'][tn, 0][::self.res, ::self.res]
+
+        self.BL = nc.variables['atmosphere_boundary_layer_thickness'][tn, 0][::self.res, ::self.res]
+        self.CAPE = nc.variables['specific_convective_available_potential_energy'][tn, 0][::self.res, ::self.res]  #J/kg
+        self.CIN = nc.variables['atmosphere_convective_inhibition'][tn, 0][::self.res, ::self.res] #J/kg
+        self.LCL = nc.variables['lifting_condensation_level'][tn, 0][::self.res, ::self.res]
+        self.LFC = nc.variables['atmosphere_level_of_free_convection'][tn, 0][::self.res, ::self.res]
+
+        
+        self.mslp = nc.variables['air_pressure_at_sea_level'][tn, 0][::self.res, ::self.res]/100 #in hPa
+          
+        if tn >= 1: self.prec = (nc.variables['precipitation_amount_acc'][tn+1, 0][::self.res, ::self.res] - nc.variables['precipitation_amount_acc'][tn-1, 0][::self.res, ::self.res] )/2       
+        if tn >= 1: self.LH = (-nc.variables['integral_of_surface_downward_latent_heat_evaporation_flux_wrt_time'][tn+1, 0][::self.res, ::self.res] + nc.variables['integral_of_surface_downward_latent_heat_evaporation_flux_wrt_time'][tn-1, 0][::self.res, ::self.res] +
+                               -nc.variables['integral_of_surface_downward_latent_heat_sublimation_flux_wrt_time'][tn+1, 0][::self.res, ::self.res] + nc.variables['integral_of_surface_downward_latent_heat_sublimation_flux_wrt_time'][tn-1, 0][::self.res, ::self.res] )/(2*60*60) #upward W/m**2       
+        if tn >= 1: self.SH = (-nc.variables['integral_of_surface_downward_sensible_heat_flux_wrt_time'][tn+1, 0][::self.res, ::self.res] + nc.variables['integral_of_surface_downward_sensible_heat_flux_wrt_time'][tn-1, 0][::self.res, ::self.res] )/(2*60*60) #upward W/m**2      
+        
+       
+    def imp_level(self, pn, tn):
+        """import just the data of one level pn for one point of time tn"""     
+        print('presslevel: '+ str(self.press[pn])+ ', time: '+ str(self.datetime[tn]))
+        self.chosen_plevel = int(self.press[pn])
+        
+        pn = len(self.press) - pn -1 #since I inversed the pressure
+        
+        nc= Dataset(self.filename)
+
+        # Variables
+        self.T = nc.variables['air_temperature_pl'][tn, pn][::self.res, ::self.res]
+        ### for older codes this one should be implemented again
+#        self.mslp = nc.variables['air_pressure_at_sea_level'][tn, 0][::self.res, ::self.res]/100 #in hPa
+        self.u = nc.variables['x_wind_pl'][tn, pn][::self.res, ::self.res]
+        self.v = nc.variables['y_wind_pl'][tn, pn][::self.res, ::self.res]        
+        self.PV = nc.variables['ertel_potential_vorticity_pl'][tn, pn][::self.res, ::self.res] #K m2 kg-1 s-1
+        self.geop = nc.variables['geopotential_pl'][tn, pn][::self.res, ::self.res]/9.81
+        self.RH = nc.variables['relative_humidity_pl'][tn, pn][::self.res, ::self.res]
+        self.w = nc.variables['upward_air_velocity_pl'][tn, pn][::self.res, ::self.res]
+        self.cloud = nc.variables['cloud_area_fraction_pl'][tn, pn][::self.res, ::self.res]
+
+       
+
+        
+        
+    def imp_cross_sec(self, xn, yn, tn):
+        """import data for a cross section following xn and yn at time tn
+        xn and yn from d.imp_cross_sec
+        I rotated xn and yn - maybe this introduced an error somewhere"""
+        nc= Dataset(self.filename)
+
+        # Variables
+        self.T = nc.variables['air_temperature_pl'][tn][::-1, ::self.res, ::self.res][:, xn, yn]
+#        self.mslp = nc.variables['air_pressure_at_sea_level'][tn, 0][::self.res, ::self.res]/100 #in hPa
+        self.u = nc.variables['x_wind_pl'][tn][::-1, ::self.res, ::self.res][:, xn, yn]
+        self.v = nc.variables['y_wind_pl'][tn][::-1, ::self.res, ::self.res][:, xn, yn]       
+        self.PV = nc.variables['ertel_potential_vorticity_pl'][tn][::-1, ::self.res, ::self.res][:, xn, yn]
+        self.BL = nc.variables['atmosphere_boundary_layer_thickness'][tn, 0][::self.res, ::self.res][xn, yn]
+        self.geop = nc.variables['geopotential_pl'][tn][::-1, ::self.res, ::self.res][:, xn, yn]/9.81
+        self.RH = nc.variables['relative_humidity_pl'][tn][::-1, ::self.res, ::self.res][:, xn, yn]
+        self.w = nc.variables['upward_air_velocity_pl'][tn][::-1, ::self.res, ::self.res][:, xn, yn]       
+
+    def imp_cross_sec_reduced(self, xn, yn, tn):
+        """import data for a cross section following xn and yn at time tn
+        xn and yn from d.imp_cross_sec
+        I rotated xn and yn - maybe this introduced an error somewhere"""
+        nc= Dataset(self.filename)
+
+        # Variables
+        self.T = nc.variables['air_temperature_pl'][tn][::-1, ::self.res, ::self.res][:, xn, yn]
+        self.u = nc.variables['x_wind_pl'][tn][::-1, ::self.res, ::self.res][:, xn, yn]
+        self.v = nc.variables['y_wind_pl'][tn][::-1, ::self.res, ::self.res][:, xn, yn]       
+        self.RH = nc.variables['relative_humidity_pl'][tn][::-1, ::self.res, ::self.res][:, xn, yn]
+
+        
+    def imp_cross_sec_full(self, xn, yn, tn):
+        """import data for a cross section following xn and yn at time tn
+        xn and yn from d.imp_cross_sec
+        I rotated xn and yn - maybe this introduced an error somewhere"""
+        nc= Dataset(self.filename)
+
+        # Variables
+        self.T = nc.variables['air_temperature_pl'][tn][::-1, ::self.res, ::self.res][:, xn, yn]
+#        self.mslp = nc.variables['air_pressure_at_sea_level'][tn, 0][::self.res, ::self.res]/100 #in hPa
+        self.u = nc.variables['x_wind_pl'][tn][::-1, ::self.res, ::self.res][:, xn, yn]
+        self.v = nc.variables['y_wind_pl'][tn][::-1, ::self.res, ::self.res][:, xn, yn]       
+        self.PV = nc.variables['ertel_potential_vorticity_pl'][tn][::-1, ::self.res, ::self.res][:, xn, yn]
+        self.BL = nc.variables['atmosphere_boundary_layer_thickness'][tn, 0][::self.res, ::self.res][xn, yn]
+        self.geop = nc.variables['geopotential_pl'][tn][::-1, ::self.res, ::self.res][:, xn, yn]/9.81
+        self.RH = nc.variables['relative_humidity_pl'][tn][::-1, ::self.res, ::self.res][:, xn, yn]
+        self.w = nc.variables['upward_air_velocity_pl'][tn][::-1, ::self.res, ::self.res][:, xn, yn]
+
+        self.T0m = nc.variables['air_temperature_0m'][tn, 0][::self.res, ::self.res][xn, yn]
+        self.T2m = nc.variables['air_temperature_2m'][tn, 0][::self.res, ::self.res] [xn, yn]       
+        self.mslp = nc.variables['air_pressure_at_sea_level'][tn, 0][::self.res, ::self.res][xn, yn]/100 #in hPa
+        self.u10m = nc.variables['x_wind_10m'][tn, 0][::self.res, ::self.res][xn, yn]
+        self.v10m = nc.variables['y_wind_10m'][tn, 0][::self.res, ::self.res][xn, yn]
+        
+#        self.cloud_conv = nc.variables['convective_cloud_area_fraction'][tn, 0][::self.res, ::self.res][xn, yn]  #it is always 0
+        self.cloud_high = nc.variables['high_type_cloud_area_fraction'][tn, 0][::self.res, ::self.res][xn, yn]
+        self.cloud_med = nc.variables['medium_type_cloud_area_fraction'][tn, 0][::self.res, ::self.res][xn, yn]
+        self.cloud_low = nc.variables['low_type_cloud_area_fraction'][tn, 0][::self.res, ::self.res][xn, yn]
+
+        self.BL = nc.variables['atmosphere_boundary_layer_thickness'][tn, 0][::self.res, ::self.res][xn, yn]
+        self.CAPE = nc.variables['specific_convective_available_potential_energy'][tn, 0][::self.res, ::self.res][xn, yn]  #J/kg
+        self.CIN = nc.variables['atmosphere_convective_inhibition'][tn, 0][::self.res, ::self.res][xn, yn] #J/kg
+        self.LCL = nc.variables['lifting_condensation_level'][tn, 0][::self.res, ::self.res][xn, yn]
+        self.LFC = nc.variables['atmosphere_level_of_free_convection'][tn, 0][::self.res, ::self.res][xn, yn]
+
+          
+        if tn >= 1: self.prec = (nc.variables['precipitation_amount_acc'][tn+1, 0][::self.res, ::self.res][xn, yn] - nc.variables['precipitation_amount_acc'][tn-1, 0][::self.res, ::self.res][xn, yn] )/2  #mm/h
+        if tn >= 1: self.LH = (-nc.variables['integral_of_surface_downward_latent_heat_evaporation_flux_wrt_time'][tn+1, 0][::self.res, ::self.res][xn, yn] + nc.variables['integral_of_surface_downward_latent_heat_evaporation_flux_wrt_time'][tn-1, 0][::self.res, ::self.res][xn, yn] +
+                               -nc.variables['integral_of_surface_downward_latent_heat_sublimation_flux_wrt_time'][tn+1, 0][::self.res, ::self.res][xn, yn] + nc.variables['integral_of_surface_downward_latent_heat_sublimation_flux_wrt_time'][tn-1, 0][::self.res, ::self.res][xn, yn] )/(2*60*60) #upward W/m**2       
+        if tn >= 1: self.SH = (-nc.variables['integral_of_surface_downward_sensible_heat_flux_wrt_time'][tn+1, 0][::self.res, ::self.res][xn, yn] + nc.variables['integral_of_surface_downward_sensible_heat_flux_wrt_time'][tn-1, 0][::self.res, ::self.res][xn, yn] )/(2*60*60) #upward W/m**2      
+        if tn >= 1: self.LWsurf = (-nc.variables['integral_of_surface_net_downward_longwave_flux_wrt_time'][tn+1, 0][::self.res, ::self.res][xn, yn] + nc.variables['integral_of_surface_net_downward_longwave_flux_wrt_time'][tn-1, 0][::self.res, ::self.res][xn, yn] )/(2*60*60) #upward W/m**2      
+        if tn >= 1: self.SWsurf = (-nc.variables['integral_of_surface_net_downward_shortwave_flux_wrt_time'][tn+1, 0][::self.res, ::self.res][xn, yn] + nc.variables['integral_of_surface_net_downward_shortwave_flux_wrt_time'][tn-1, 0][::self.res, ::self.res][xn, yn] )/(2*60*60) #upward W/m**2      
+        if tn >= 1: self.LWTOA = (-nc.variables['integral_of_toa_outgoing_longwave_flux_wrt_time'][tn+1, 0][::self.res, ::self.res][xn, yn] + nc.variables['integral_of_toa_outgoing_longwave_flux_wrt_time'][tn-1, 0][::self.res, ::self.res][xn, yn] )/(2*60*60) #upward W/m**2      
+        if tn >= 1: self.SWTOA = (-nc.variables['integral_of_toa_net_downward_shortwave_flux_wrt_time'][tn+1, 0][::self.res, ::self.res][xn, yn] + nc.variables['integral_of_toa_net_downward_shortwave_flux_wrt_time'][tn-1, 0][::self.res, ::self.res][xn, yn] )/(2*60*60) #upward W/m**2      
+
+
+#import from the internet
+
+       
+        #import numpy as np
+#import netCDF4
+#
+#class data:
+#    def __init__(self, year, month, day, hour):
+#        self.year = year
+#        self.month = month
+#        self.day = day
+#        self.hour = hour
+#        
+#        
+#    def imp(self, Tsurf= False, Th= False, psurf= False, geoh= False, uh= False, vh= False, usurf= False, vsurf= False,
+#            PVh= False, APE= False, wh= False ):
+#        """import data from an online met.no catalogue
+#        Tsurf - air temperature 0m
+#        Th - temperature at pressure levels
+#        psurf - air pressure at sea level
+#        geoh - geopotential height at pressure levels (pl)
+#        uh - east - west wind at pl
+#        vh - north south wind at pl
+#        wh - upward air velocity at pl
+#        usurf - east - west 10m wind
+#        vsurf - north south 10m wind
+#        PVh - Ertel potential vorticity at pl
+#        APE - specific convective available potential energy
+#        """
+#    
+#        res='4'
+#        res2= '4'
+#        
+#        url = ('http://thredds.met.no/thredds/dodsC/aromearcticraw/'+str(self.year)+'/'+str(self.month).zfill(2)+'/'+str(self.day).zfill(2)+
+#        '/arome_arctic_extracted_2_5km_'+str(self.year)+str(self.month).zfill(2)+str(self.day).zfill(2)+'T'+str(self.hour).zfill(2)+
+#        'Z.nc?time[0:1:66],pressure[0:1:10],longitude[0:'+res+':948][0:'+res+':738],latitude[0:'+res+':948][0:'+res+':738]'
+#        + (',air_temperature_0m[0:1:0][0:1:0][0:'+res+':948][0:'+res+':738]' if Tsurf== True else '') #this is hopefully the surface temperature
+#        + (',air_temperature_pl[0:1:0]['+str(Th)+':1:'+str(Th)+'][0:'+res+':948][0:'+res+':738]' if type(Th)== int else'') #this should be the air temperature at a given height
+#        + (',air_pressure_at_sea_level[0:1:0][0:1:0][0:'+res+':948][0:'+res+':738]' if psurf== True else '') #surface pressure
+#        + (',geopotential_pl[0:1:0]['+str(geoh)+':1:'+str(geoh)+'][0:'+res+':948][0:'+res+':738]' if type(geoh)== int else'') # at 
+#        + (',x_wind_10m[0:1:0][0:1:0][0:'+res2+':948][0:'+res2+':738]' if usurf== True else '')
+#        + (',y_wind_10m[0:1:0][0:1:0][0:'+res2+':948][0:'+res2+':738]' if vsurf== True else '')
+#        + (',x_wind_pl[0:1:0]['+str(uh)+':1:'+str(uh)+'][0:'+res2+':948][0:'+res2+':738]' if type(uh)== int else'')
+#        + (',y_wind_pl[0:1:0]['+str(vh)+':1:'+str(vh)+'][0:'+res2+':948][0:'+res2+':738]' if type(vh)== int else'')
+#        + (',upward_air_velocity_pl[0:1:0]['+str(wh)+':1:'+str(wh)+'][0:'+res+':948][0:'+res+':738]'  if type(wh)== int else'') #this is relative strong for the last PL
+##        + (',surface_geopotential[0:1:0][0:1:0][0:'+res+':948][0:'+res+':738]' if geosurf== True else '')
+#        + (',ertel_potential_vorticity_pl[0:1:0]['+str(PVh)+':1:'+str(PVh)+'][0:'+res+':948][0:'+res+':738]' if type(PVh)== int else'')
+#        + (',specific_convective_available_potential_energy[0:1:0][0:1:0][0:'+res+':948][0:'+res+':738]' if APE== True else '')
+#        + (',projection_lambert')
+#        )
+#        
+#        
+#        print('get data from '+url)
+#        
+#        # create a dataset object
+#        dataset = netCDF4.Dataset(url)
+#         
+#        # lookup a variable
+#        self.time = dataset.variables['time'][:]
+#        self.press = dataset.variables['pressure'][:]
+#        self.lon= dataset.variables['longitude'][:]
+#        self.lat= dataset.variables['latitude'][:]
+#        
+#        if Tsurf == True: self.Tsurf= dataset.variables['air_temperature_0m'][0,0] - 273.15
+#        if type(Th)== int: self.Th= dataset.variables['air_temperature_pl'][0,0] - 273.15
+#        if psurf == True: self.psurf= dataset.variables['air_pressure_at_sea_level'][0,0] /100
+#        if type(geoh) == int: self.geoh= dataset.variables['geopotential_pl'][0,0]/9.81
+#
+#        if usurf == True: self.usurf =dataset.variables['x_wind_10m'][:][0,0]
+#        if vsurf == True: self.vsurf =dataset.variables['y_wind_10m'][:][0,0]
+#        if type(uh) == int: self.uh =dataset.variables['x_wind_pl'][:][0,0]
+#        if type(vh)== int: self.vh =dataset.variables['y_wind_pl'][:][0,0]
+#        if type(wh)== int: self.wh =dataset.variables['upward_air_velocity_pl'][0,0]
+#        #sgeo= dataset.variables['surface_geopotential'][0,0]/9.81
+#        if type(PVh)== int: self.PVh = dataset.variables['ertel_potential_vorticity_pl'][0,0]
+#        if APE== True: self.APE= dataset.variables['specific_convective_available_potential_energy'][0,0]
+#    
+#        self.dataset=dataset
+##        print('height', self.press[int(height)])

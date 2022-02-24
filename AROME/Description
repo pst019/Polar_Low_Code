@@ -1,0 +1,16 @@
+main_AROME - plot different fields of AROME on horizontal map
+main_AROME_2 - plot even more fields
+main_AROME_3 - much shorter than version 2
+
+main_AROME_movie - plot every time step out of which a movie can be created
+
+main_AROME_vertical - plot vertical cross sections
+main_AROME_vertical_2 - a bit development, but some rubbish in it
+
+
+AROME_track - track single cyclones in AROME
+AROME_track_wind - as before, but plot also the max wind in area
+
+now for several experiments - for intensity comparison:
+AROME_intensity - AROME_track, but for several sens. experiments at the same time
+AROME_intensity_2 - development, including track_wind
