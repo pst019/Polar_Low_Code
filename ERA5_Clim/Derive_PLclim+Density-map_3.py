@@ -14,15 +14,15 @@ import os
 user = os.getcwd().split('/')[2]
 
 if user=='pst019':
-    Mediadir= '/media/'+user+'/PatsOrange/'
+    Mediadir= '/media/'+user+'/Backup/'
 else:
     Mediadir= '/run/media/pst019/PatsOrange/'
 
-homedir=Mediadir+'home/'
+homedir=os.getcwd()+'/../' #Mediadir+'home/'
 
 
 import sys  #to import the functions from a different directory
-sys.path.insert(0, homedir+ 'Polar_Low/polar_low_code/Functions')
+sys.path.insert(0, homedir+ '/Functions')
 
 import xarray as xr
 import pandas as pd 
@@ -43,14 +43,14 @@ import time
 start= time.perf_counter()
 #
 save= True
-# save= False
+save= False
 savedir= homedir + '/Polar_Low/ERA5_PLclim/Figs/PL_density_map/'
 
 write= True #write the climatology
 # write= False
 
-import_PLs= False #if True the matched PL list is imported
-Plot_density= False #make a plot that calculates the PLs within a given distance, this takes some time at first calculation, but the file is saved
+import_PLs= True #if True the matched PL list is imported
+Plot_density= True #make a plot that calculates the PLs within a given distance, this takes some time at first calculation, but the file is saved
 plot_log=True #make a "specified logarithmic scale"
 
 
@@ -66,7 +66,7 @@ fignr= 1
 
 #track_dir= Mediadir+"/data/ERA5_Clim/track_lists/fram/"
 
-hem= 'SH'
+hem= 'NH'
 
 if hem == 'NH': ending= 'atl-pac'
 elif hem == 'SH':  ending= 'SH180'
@@ -527,7 +527,7 @@ if Plot_density:
         ax.plot(list(np.linspace(0,1, 50)* [loc[1]-.3  - (loc[0]+.3)] + loc[0]+.3) + list(np.linspace(1,0, 50)* [loc[1]-.3 - (loc[0]+.3)] + loc[0]+.3) + [loc[0]+.3],
                 50* [loc[3] ] + 50*[ loc[2] ] + [loc[3]], transform=ccrs.PlateCarree(), lw=2, label= box_name)
         
-    plt.legend(loc= 'upper left')     
+    if legend: plt.legend(loc= 'upper left')     
     
     if save:
         savefile= savedir+ f'{hem}_track_density_per{per_dist}km_box'
